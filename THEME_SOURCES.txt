@@ -1,0 +1,132 @@
+zterm-r 的主题数据同步自本机 zterm，以下保留原主题来源与 ANSI 映射说明。
+
+终端主题来源与映射（2026-10-23）
+
+主题是打包的 RGB 快照，不在启动时执行或修改 Vim 配置。
+所有 palette 数组按 ANSI 0–15 排列；terminal_palette 补齐标准 xterm
+6×6×6 色立方体和 24 级灰阶。仅 PaperColor 另覆盖 81、121 两个索引，
+其他扩展色及 truecolor 保持不变；切换主题时重新设置完整 256 色以免残留。
+字体、字号、自定义文字/背景/光标色仍单独保存。
+
+GNOME Terminal / Ubuntu 预设
+参考 Ubuntu 24.04：gnome-terminal 3.52.0-1ubuntu2、yaru-theme-gtk 24.04.2-0ubuntu1。
+五套文字/背景预设来自 GNOME Terminal 3.52.0 src/profile-editor.cc 的 color_schemes：
+https://github.com/GNOME/gnome-terminal/blob/3.52.0/src/profile-editor.cc
+  浅黄背景黑字：#000000 / #ffffdd
+  白底黑字：#000000 / #ffffff
+  黑底灰字：#aaaaaa / #000000
+  黑底白字：#ffffff / #000000
+  黑底绿字：#00ff00 / #000000
+Ubuntu 默认：文字 #ffffff、背景 #300a24。
+值来自本机 Yaru gtk.gresource 内 /com/ubuntu/themes/Yaru/3.0/gtk.css 的
+terminal-window .terminal-screen 规则；采用窗口激活时颜色，不复制失焦变色行为。
+项目：https://github.com/ubuntu/yaru
+六套预设光标均使用文字颜色；ANSI 0–15 共用 Ubuntu 24.04 已安装的 GNOME 默认调色板，
+取自 /usr/share/glib-2.0/schemas/org.gnome.Terminal.gschema.xml 的 palette 默认值。
+上游：https://github.com/GNOME/gnome-terminal/blob/3.52.0/src/org.gnome.Terminal.gschema.xml
+注意 schema 默认亮绿色为 #33da7a；它与偏好页手动选择 GNOME 调色板时的 #33d17a 不同。
+这些都是随应用打包的 RGB 值，不读取或修改 GNOME Terminal 的用户配置。
+
+Solarized Light / Dark
+本机：~/.vim_runtime/sources_non_forked/vim-colors-solarized/colors/solarized.vim
+RGB 定义在 245–261 行，16 色索引在 285–300 行，明暗反转在 379–391 行。
+使用本机 GUI RGB 值，包括实验绿色 #719e07，不改成其他版本的 #859900。
+Light 将八种 base 色按本机 light 分支反转；文字和光标均取 base0。
+项目：https://github.com/altercation/vim-colors-solarized
+
+Gruvbox Light / Dark
+本机：~/.vim_runtime/sources_non_forked/gruvbox/colors/gruvbox.vim
+使用默认 medium 对比度、Normal 的 fg1/bg0，光标使用前景色。
+ANSI 1–6 对应 Statement/String/Type/Identifier/Constant/PreProc 的 GUI RGB，
+普通色和亮色 9–14 均使用 light 的 faded / dark 的 bright。
+不再把 Neovim 内嵌终端的 neutral 普通色当成 Vim 语法高亮色。
+0/7/8/15 仍为 bg0/fg4/gray/fg1，其中 gray 与 Comment 一致。
+项目：https://github.com/morhetz/gruvbox
+
+PaperColor Light / Dark
+本机：~/.vim_runtime/my_plugins/papercolor/colors/papercolor.vim
+来源：https://github.com/NLKNguyen/papercolor-theme/blob/master/colors/PaperColor.vim
+使用本地完整主题 default.light/default.dark 的 GUI RGB；前景取 color07，
+背景取 color00，光标取 cursor_bg。不是 lightline 状态栏配色。
+按用户两张 C++/Vim 配置截图校正默认 Vim 的 cterm 色槽：
+Dark 的 ANSI 3/11（return）使用 color10=#afd700，6/14（注释）使用 color05=#808080。
+Light 按本机 Vim 默认 light 分支推导：2/10（Type）及 3/11（Statement）使用
+color10=#d70087，4/12（Comment）使用 color05=#878787；Light 尚无用户截图比对。
+Dark 索引 81（截图中的 Vim 配置选项）映射 color14=#00afaf，
+121（截图中 auto）映射 color10=#afd700；Light 分别为 #005faf、#d70087。
+PaperColor 原版默认 light/dark 色表不引用 81/121，因此其自身的 256 色高亮不受这两项覆盖影响。
+173（Dark static/const）和 205（Dark 数字）等原版引用的扩展索引保持标准值。
+其他程序或自定义 Vim 主题若使用 81/121，也会看到上述映射。
+0/7/8/15 为 color00/color07/color05/color07，8 使用 Comment。
+color00–15 是主题内部的语法角色表，不能直接当成通用 ANSI 色序：
+例如 color05 是注释灰，color10 是 Statement/Type，color13 是数字色。
+默认 Vim 共享一个 cterm 索引的语法组不能由终端拆开匹配；例如某些 Vim 版本的
+Statement 同时用于 return/if/for，而 PaperColor 把条件/循环与一般语句分色。
+
+Peaksea Light / Dark
+本机：~/.vim_runtime/sources_forked/peaksea/colors/peaksea.vim
+使用 LIGHT / DARK COLOR DEFINE 段中的 GUI RGB，Normal 和 Cursor 分别提供
+前景、背景和光标颜色。原文件没有独立的 terminal_color_0–15 数组。
+ANSI 映射采用本机语法高亮组的 GUI RGB：
+  0=Normal.bg，1=Error.fg，2=PreProc.fg，3=Number.fg，
+  4=Statement.fg，5=Identifier.fg，6=Constant.fg，7=Normal.fg，
+  8=Comment.fg，9–14 分别复用 1–6，15=Normal.fg。
+亮色复用原主题对应颜色，不凭空增亮；Light 同样沿用这些组名映射。
+这属于将 Vim 主题适配到终端 ANSI 的约定，并非原作者提供的终端预设。
+项目：https://www.vim.org/scripts/script.php?script_id=760
+
+上述三组主题让 ANSI 输出采用 Vim 的主要语法用色，并非完整的 Vim 语法规则。
+终端无法判断输出里的关键词、字符串和注释，具体选用哪个 ANSI 槽仍由程序决定。
+16 色也无法容纳所有高亮组；没有覆盖的组继续由应用自己的配色控制。
+这里以 GUI RGB 为颜色基准；Vim 未启用 termguicolors 时可能使用近似的 256 色。
+除 PaperColor 的 81/121 外，索引 16–255 不受预设影响；直接输出的 truecolor RGB 始终不变。
+
+已删除经典紫、深色、浅色、深海蓝预设；只保留旧标识和颜色用于识别配置迁移。
+classic/ocean → ubuntu-default，dark → gnome-gray-on-black，light → gnome-black-on-white。
+未修改的旧默认颜色换成目标预设颜色；用户自定义文字/背景/光标色及字体保留。
+读取时只在内存迁移，用户保存外观后才写入新标识。新配置默认使用 Ubuntu 默认。
+
+应用界面配色
+“跟随终端配色”按所选终端预设生成界面色，也可独立选定上述任一主题，或使用系统 GTK 外观。
+界面背景/文字采用预设值，层次背景、悬停背景和边框分别以 6%、12%、25% 的文字色混合。
+强调色默认采用预设的 ANSI 蓝色；Ubuntu 使用橙色 #e95420，黑底绿字使用 #00af00 强调色
+和 #d0d0d0 界面文字。选中背景用 25% 强调色混合，以保留原文字的可读性。
+这些界面配色是 zterm 自行搭配的 GTK 样式，并非上述项目提供的完整桌面主题。
+样式只作用于 zTerm 当前窗口及其菜单/对话框，不修改系统 GTK/GNOME Terminal 配置。
+
+新增本地 Vim 主题（2026-10-23）
+以 Vim -Nu NONE -i NONE -n -es、set termguicolors 和指定 background 加载
+本地文件，使用 synIDtrans / synIDattr 的 GUI RGB 解析链接组及明暗分支。
+只保存 RGB 快照，运行 zterm 不需要 Vim 或原主题目录。
+前景/背景取 Normal.fg/bg，光标取 Cursor.bg。
+Monokai 完整保留原文件的 g:terminal_ansi_colors（ANSI 0–15）。
+其余主题没有 ANSI 色表，使用以下语法角色适配：
+  0=Normal.bg，1=Error.fg，2=String.fg，3=Constant.fg，
+  4=Function.fg，5=Statement.fg，6=Special.fg，7=Normal.fg，
+  8=Comment.fg，9–14 复用 1–6，15=Normal.fg。
+这是 zterm 的语法用色映射，不代表各主题原生的终端色表；槽位名称不保证
+对应红/绿/黄等传统色相。例如 NightOwl Dark 的 Error 本身为白色。
+亮色不额外增亮，ANSI 16–255 保持标准值，truecolor 不被改写。
+界面复用既有 interface_colors 生成逻辑，强调色采用 ANSI 4。
+AyuMirage 使用 dark 分支；TokyoNight Storm 使用 TokyoNightStorm 的 dark
+分支；这两个文件的 light 分支分别与 Ayu Light / TokyoNight Light 相同。
+NightOwl 使用本地 NoItalics 版本，同时提供 Light / Dark；终端色表不携带
+Vim 字体斜体设置。所有新增主题也可独立用于界面主题。
+
+本地源文件与分支（路径相对 ~/.vim_runtime/my_plugins/）：
+  Monokai: vim-monokai/colors/monokai.vim，background=dark
+  Ayu Light: custom-themes/colors/Ayu.vim，background=light
+  Ayu Dark: custom-themes/colors/Ayu.vim，background=dark
+  AyuMirage: custom-themes/colors/AyuMirage.vim，background=dark
+  Breadog: custom-themes/colors/Breadog.vim，background=light
+  ClawBeige Light: custom-themes/colors/ClawBeige.vim，background=light
+  ClawBeige Dark: custom-themes/colors/ClawBeige.vim，background=dark
+  DragonBeige: custom-themes/colors/DragonBeige.vim，background=light
+  FaultySchematics: custom-themes/colors/FaultySchematics.vim，background=light
+  NightOwl Light: custom-themes/colors/NightOwlNoItalics.vim，background=light
+  NightOwl Dark: custom-themes/colors/NightOwlNoItalics.vim，background=dark
+  RetroTheme: custom-themes/colors/RetroTheme.vim，background=dark
+  TokyoNight Light: custom-themes/colors/TokyoNight.vim，background=light
+  TokyoNight Dark: custom-themes/colors/TokyoNight.vim，background=dark
+  TokyoNight Storm: custom-themes/colors/TokyoNightStorm.vim，background=dark
+  VintageLight: custom-themes/colors/VintageLight.vim，background=light

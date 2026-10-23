@@ -1,0 +1,37 @@
+.zterm { background: @background; color: @foreground; }
+.zterm headerbar, .zterm .sidebar, .zterm .statusbar,
+.zterm popover > contents {
+  background: @surface; color: @foreground; border-color: @border;
+}
+.zterm label { color: inherit; }
+.zterm .section-heading, .zterm .session-title, .zterm .server-name,
+.zterm .welcome-title { color: @foreground; font-weight: 700; }
+.zterm .dim-label { color: alpha(@foreground, 0.78); opacity: 1; }
+.zterm .sidebar { border-right: 1px solid @border; }
+.zterm .statusbar { border-top: 1px solid @border; padding: 6px 12px; }
+.zterm .navigation-sidebar, .zterm .navigation-sidebar row,
+.zterm .sessions, .zterm .sessions > header { background: transparent; color: @foreground; }
+.zterm .sessions > header tab { color: @foreground; padding: 5px 10px; }
+.zterm .sessions > header tab:checked { background: @selection; border-bottom: 2px solid @accent; }
+.zterm .appearance-tabs, .zterm .appearance-tabs > stack {
+  background: @background; color: @foreground; border-color: @border;
+}
+.zterm .appearance-tabs > header { background: @surface; border-color: @border; }
+.zterm .appearance-tabs > header tab:checked { background: @selection; border-bottom: 2px solid @accent; }
+.zterm button, .zterm entry, .zterm dropdown,
+.zterm spinbutton, .zterm scale trough {
+  background: @surface; color: @foreground; border-color: @border;
+  box-shadow: none;
+}
+.zterm button:hover, .zterm row:hover { background: @hover; }
+.zterm button:checked, .zterm row:selected { background: @selection; }
+.zterm button:focus-visible, .zterm entry:focus-visible { outline-color: @accent; }
+.zterm scale highlight, .zterm progressbar progress { background: @accent; }
+.zterm separator { background: @border; }
+.zterm.zterm-backdrop, .zterm.zterm-backdrop .sidebar,
+.zterm.zterm-backdrop .statusbar, .zterm.zterm-backdrop .sessions {
+  background: transparent;
+}
+.zterm.zterm-backdrop headerbar { background: alpha(@surface, @opacity); }
+.zterm.zterm-backdrop .sessions > header { background: alpha(@surface, 0.35); }
+.zterm.zterm-backdrop .sessions > header tab:checked { background: alpha(@selection, 0.85); }

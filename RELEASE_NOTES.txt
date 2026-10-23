@@ -1,0 +1,41 @@
+# zterm-r v0.3.0
+
+首个独立 Rust / GTK4 版本。使用系统 OpenSSH 和 VTE 提供本地终端、SSH 会话与 SFTP 文件传输，可与 Python 版 zterm 并存。
+
+## 功能与界面
+
+- 按服务器分组的终端标签、搜索、拖动排序、服务器增删改与复制。
+- 新建会话按钮位于左上角侧栏开关右侧；添加服务器按钮位于列表底部；重连按钮位于底栏左侧。
+- 收起侧栏后终端自动填满，重新展开恢复宽度；退出状态显示“已结束”。
+- 文件与目录上传、下载、重命名、新建目录和删除；后台串行队列支持取消和显式冲突处理。
+- 外观设置拆为“字体与配色”和“背景效果”，共用实时终端预览。
+- 图片、强度、不透明度及毛玻璃调整可实时预览，取消恢复原设置。
+- 内置 30 款配色，包含 Monokai、Ayu、AyuMirage、Breadog、ClawBeige、DragonBeige、FaultySchematics、NightOwl、RetroTheme、TokyoNight、VintageLight 及对应明暗变体。
+- 可手动刷新本地或远端 Codex CLI 提供的额度信息。
+
+## 修复
+
+- 修复外观预览过高导致设置项被挤压的问题。
+- 修复 GTK 默认底色遮挡终端背景图片的问题。
+- 背景选图、上传和下载使用异步文件选择器，修复窗口消失及崩溃问题。
+- 文件任务绑定打开选择器时的服务器和路径；取消不会提交传输任务。
+- 文件传输支持临时文件、取消清理及不覆盖已有目标的重命名。
+
+## 安装包
+
+- zterm-r_0.3.0_amd64.deb：在 Ubuntu 24.04 amd64 构建和验证。
+- SHA256SUMS：安装包校验文件。
+- 下载后执行：sudo apt install ./zterm-r_0.3.0_amd64.deb
+- 启动：zterm-r，或应用菜单中的 zterm-r。
+- 卸载：sudo apt remove zterm-r。用户配置和钥匙环数据保留。
+
+包只安装 /usr/bin/zterm-r、独立桌面入口、图标和文档，不覆盖 zterm。
+若先前通过 install.sh 做过用户级安装，~/.local/bin/zterm-r 和用户级桌面入口可能优先于系统包；请按 README 的说明切换安装方式。
+
+## 兼容性与验证边界
+
+- 运行时不依赖 Python；依赖 GTK4、VTE GTK4、libsecret 和 OpenSSH，具体版本约束写入 deb 元数据。
+- 沿用 ~/.config/ssh-workbench/ 下的配置及 org.zterm.Server 钥匙环记录。两个版本共享配置，请避免同时编辑。
+- Release 构建、15 项自动化测试和 30 款主题切换已通过。GUI 测试使用 X11/Xvfb；SFTP 测试使用隔离的本机 sftp-server。
+- Wayland、桌面 portal 完整交互及真实远程 SSH/跳板/钥匙环需要在对应环境进一步验证。
+- 尚未进行性能基准测试，不承诺相比 Python 版的性能增幅。

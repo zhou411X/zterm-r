@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=zterm-r
+Comment=Terminal and SSH workspace
+Exec=/usr/bin/zterm-r
+Icon=local.zterm.r
+Terminal=false
+Categories=System;TerminalEmulator;
+StartupNotify=true
