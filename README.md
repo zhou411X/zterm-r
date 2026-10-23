@@ -2,7 +2,7 @@
 
 Rust + GTK4/VTE 终端与 SSH 工作台，从 [zterm](https://github.com/zhou411X/zterm) 独立整理。支持按服务器分组的标签、SFTP 文件传输、30 款配色和实时背景预览。运行时不依赖 Python，SSH 使用系统 OpenSSH，密码保存在 libsecret 系统钥匙环。
 
-[下载安装包](https://github.com/zhou411X/zterm-r/releases/latest) · [v0.3.0 发布说明](RELEASE_NOTES.txt) · [GPL-3.0 许可证](LICENSE)
+[下载安装包](https://github.com/zhou411X/zterm-r/releases/latest) · [发布说明](RELEASE_NOTES.txt) · [GPL-3.0 许可证](LICENSE)
 
 ## 安装与升级
 
@@ -10,7 +10,7 @@ Rust + GTK4/VTE 终端与 SSH 工作台，从 [zterm](https://github.com/zhou411
 
 ```sh
 sha256sum -c SHA256SUMS
-sudo apt install ./zterm-r_0.3.0_amd64.deb
+sudo apt install ./zterm-r_0.4.0_amd64.deb
 zterm-r
 ```
 
@@ -71,13 +71,17 @@ sh build_deb.sh
 
 顶部文件夹按钮展开右侧文件面板，支持文件和目录上传、下载、重命名、新建目录、删除文件或空目录。文件任务在后台串行执行，切换服务器不改变已提交任务的目标。冲突时需选择覆盖、另存为或取消。符号链接不跟随，文件内容经暂存文件完成后再发布。
 
-设置按钮打开非模态外观窗口：“字体与配色”页设置字体、终端配色、界面主题和颜色；“背景效果”页设置图片、透明度、图片强度和毛玻璃。两页共用下方的实时终端预览，预览始终展示选中图片的效果，“背景图片同时应用到终端”控制实际终端会话。取消恢复保存值。图片在后台解码与模糊，同一背景在会话间共享缓存。
+设置菜单提供外观设置、终端设置、快捷键设置和关于版本。外观设置打开非模态窗口：“字体与配色”页设置字体、终端配色、界面主题和颜色；“背景效果”页设置图片、透明度、图片强度和毛玻璃。两页共用下方的实时终端预览，预览始终展示选中图片的效果，“背景图片同时应用到终端”控制实际终端会话。取消恢复保存值。图片在后台解码与模糊，同一背景在会话间共享缓存。
 
 内置 30 款配色，终端与界面均可独立选择。新增 Monokai、Ayu Light/Dark、AyuMirage、Breadog、ClawBeige Light/Dark、DragonBeige、FaultySchematics、NightOwl Light/Dark、RetroTheme、TokyoNight Light/Dark/Storm 和 VintageLight，颜色值与本机 zterm 的对应主题一致。来源和 ANSI 映射见 [THEME_SOURCES.txt](THEME_SOURCES.txt)。
 
 底栏的额度刷新按钮通过已安装的 Codex CLI 查询额度；会检查 PATH、`~/.local/bin/codex` 和 `~/bin/codex`。后台查询不会确认新主机密钥或解锁钥匙环。
 
-快捷键：`Ctrl+Shift+T` 新会话、`Ctrl+Shift+W` 关闭、`Ctrl+Shift+C/V` 复制粘贴、`Alt+1…9` 切换标签、`Ctrl+PageUp/PageDown` 前后标签、`Ctrl++/-/0` 调整或重置字号。
+顶部放大镜按钮或 `Ctrl+Shift+F` 打开当前终端的搜索栏，搜索范围包含滚动历史。输入按普通文本处理，支持中文和特殊字符；可选择忽略大小写，使用上下箭头或 `Enter` / `Shift+Enter` 逐行前后查找并高亮每行的首个匹配，`Esc` 关闭搜索。
+
+“终端设置”可修改滚动缓冲区大小，默认 9999 行，0 表示不保留历史；保存后立即应用于所有会话。减少行数会丢弃超出范围的历史。所有终端均关闭响铃。“快捷键设置”中点击对应按键后录入新组合，支持清除、恢复默认和冲突检查；保存立即生效，取消不改变配置。终端与快捷键设置独立保存在 `${XDG_CONFIG_HOME:-~/.config}/zterm-r/preferences.json`。在“关于 zterm-r”中查看当前运行版本和项目主页。
+
+默认快捷键（可修改）：`Ctrl+Shift+T` 新会话、`Ctrl+Shift+W` 关闭、`Ctrl+Shift+C/V` 复制粘贴、`Alt+1…9` 切换标签、`Ctrl+PageUp/PageDown` 前后标签、`Ctrl++/-/0` 调整或重置字号。
 
 ## 验证
 

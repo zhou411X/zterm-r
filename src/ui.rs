@@ -3,6 +3,8 @@ use crate::{
     credentials,
     files::FilePanel,
     model::{self, Appearance, Config, Server},
+    preferences::{self, Preferences},
+    terminal_search::TerminalSearch,
     widgets::*,
 };
 use gtk::{gdk, prelude::*};
@@ -14,6 +16,7 @@ use std::{
 use vte::prelude::*;
 
 struct Session {
+    search: Rc<TerminalSearch>,
     terminal: vte::Terminal,
     page: gtk::Box,
     title: gtk::Label,
@@ -49,6 +52,8 @@ pub struct Workbench {
     pub window: gtk::ApplicationWindow,
     config: RefCell<Config>,
     appearance: RefCell<Appearance>,
+    preferences: RefCell<Preferences>,
+    new_button: gtk::Button,
     config_valid: Cell<bool>,
     revision: Cell<u64>,
     current: RefCell<String>,
@@ -80,6 +85,9 @@ impl Workbench {
         let loaded_appearance = Appearance::load();
         let appearance_error = loaded_appearance.as_ref().err().cloned();
         let settings = loaded_appearance.unwrap_or_default();
+        let loaded_preferences = Preferences::load();
+        let preferences_error = loaded_preferences.as_ref().err().cloned();
+        let preferences = loaded_preferences.unwrap_or_default();
         let window = gtk::ApplicationWindow::builder()
             .application(app)
             .title("zterm-r")
@@ -100,8 +108,30 @@ impl Workbench {
         header.pack_start(&sidebar_toggle);
         let new_button = icon("list-add-symbolic", "新建会话 · Ctrl+Shift+T");
         header.pack_start(&new_button);
-        let settings_button = icon("preferences-system-symbolic", "外观设置");
+        let settings_button = gtk::MenuButton::builder()
+            .icon_name("preferences-system-symbolic")
+            .tooltip_text("设置")
+            .build();
+        let settings_popover = gtk::Popover::new();
+        let settings_menu = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        let appearance_button = gtk::Button::with_label("外观设置");
+        let terminal_button = gtk::Button::with_label("终端设置");
+        let shortcuts_button = gtk::Button::with_label("快捷键设置");
+        let about_button = gtk::Button::with_label("关于 zterm-r");
+        for button in [
+            &appearance_button,
+            &terminal_button,
+            &shortcuts_button,
+            &about_button,
+        ] {
+            button.add_css_class("flat");
+            settings_menu.append(button);
+        }
+        settings_popover.set_child(Some(&settings_menu));
+        settings_button.set_popover(Some(&settings_popover));
         header.pack_end(&settings_button);
+        let terminal_search = icon("edit-find-symbolic", "搜索终端内容");
+        header.pack_end(&terminal_search);
         let file_button = icon("folder-symbolic", "显示或隐藏文件面板");
         header.pack_end(&file_button);
         window.set_titlebar(Some(&header));
@@ -159,7 +189,7 @@ impl Workbench {
         local_button.set_halign(gtk::Align::Center);
         welcome.append(&local_button);
         welcome.append(&label(
-            "Ctrl+Shift+T 新建会话   ·   Alt+1…9 切换标签",
+            "点击左上角 + 新建会话   ·   设置中可修改快捷键",
             "dim-label",
         ));
         stack.add_named(&welcome, Some("welcome"));
@@ -204,6 +234,8 @@ impl Workbench {
             window,
             config: RefCell::new(config),
             appearance: RefCell::new(settings),
+            preferences: RefCell::new(preferences),
+            new_button: new_button.clone(),
             config_valid: Cell::new(load_error.is_none()),
             revision: Cell::new(0),
             current: RefCell::new(String::new()),
@@ -225,6 +257,7 @@ impl Workbench {
         });
         this.apply_appearance(this.appearance.borrow().clone());
         this.rebuild_servers();
+        this.update_shortcut_hint();
         sidebar_toggle.connect_clicked(move |_| {
             sidebar.set_visible(!sidebar.is_visible());
         });
@@ -292,7 +325,9 @@ impl Workbench {
             }
         });
         let weak = Rc::downgrade(&this);
-        settings_button.connect_clicked(move |_| {
+        let popover = settings_popover.clone();
+        appearance_button.connect_clicked(move |_| {
+            popover.popdown();
             if let Some(w) = weak.upgrade() {
                 let preview = Rc::downgrade(&w);
                 let save = Rc::downgrade(&w);
@@ -311,6 +346,31 @@ impl Workbench {
                         }
                     },
                 );
+            }
+        });
+        for (button, shortcuts_page) in [(terminal_button, false), (shortcuts_button, true)] {
+            let weak = Rc::downgrade(&this);
+            let popover = settings_popover.clone();
+            button.connect_clicked(move |_| {
+                popover.popdown();
+                if let Some(w) = weak.upgrade() {
+                    w.show_preferences(shortcuts_page);
+                }
+            });
+        }
+        let weak = Rc::downgrade(&this);
+        about_button.connect_clicked(move |_| {
+            settings_popover.popdown();
+            if let Some(w) = weak.upgrade() {
+                w.show_about();
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        terminal_search.connect_clicked(move |_| {
+            if let Some(w) = weak.upgrade() {
+                if let Some(s) = w.current_session() {
+                    s.search.open();
+                }
             }
         });
         let weak = Rc::downgrade(&this);
@@ -381,7 +441,63 @@ impl Workbench {
         if let Some(error) = appearance_error {
             message(&this.window, "读取外观配置失败", &error);
         }
+        if let Some(error) = preferences_error {
+            message(
+                &this.window,
+                "读取终端设置失败",
+                &format!("{error}\n本次使用默认设置；保存前请检查配置。"),
+            );
+        }
         this
+    }
+
+    fn update_shortcut_hint(&self) {
+        self.new_button.set_tooltip_text(Some(&format!(
+            "新建会话 · {}",
+            self.preferences.borrow().label_for("new_session")
+        )));
+    }
+
+    fn apply_preferences(&self, value: Preferences) {
+        for group in self.groups.borrow().values() {
+            for session in group.sessions.borrow().iter() {
+                session
+                    .terminal
+                    .set_scrollback_lines(i64::from(value.scrollback_lines));
+                session.terminal.set_audible_bell(false);
+            }
+        }
+        *self.preferences.borrow_mut() = value;
+        self.update_shortcut_hint();
+    }
+
+    fn show_preferences(self: &Rc<Self>, shortcuts_page: bool) {
+        let weak = Rc::downgrade(self);
+        preferences::dialog(
+            &self.window,
+            self.preferences.borrow().clone(),
+            shortcuts_page,
+            move |value| {
+                if let Some(w) = weak.upgrade() {
+                    w.apply_preferences(value);
+                }
+            },
+        );
+    }
+
+    fn show_about(&self) {
+        let dialog = gtk::AboutDialog::builder()
+            .transient_for(&self.window)
+            .modal(true)
+            .program_name("zterm-r")
+            .version(env!("CARGO_PKG_VERSION"))
+            .comments("终端与远程服务器工作空间\nRust · GTK4 · VTE")
+            .website("https://github.com/zhou411X/zterm-r")
+            .website_label("GitHub 项目主页")
+            .license_type(gtk::License::Gpl30Only)
+            .logo_icon_name("local.zterm.r")
+            .build();
+        dialog.present();
     }
 
     fn name(&self, id: &str) -> String {
@@ -691,7 +807,8 @@ impl Workbench {
         let terminal = vte::Terminal::new();
         terminal.set_hexpand(true);
         terminal.set_vexpand(true);
-        terminal.set_scrollback_lines(20000);
+        terminal.set_scrollback_lines(i64::from(self.preferences.borrow().scrollback_lines));
+        terminal.set_audible_bell(false);
         terminal.set_scroll_on_output(false);
         terminal.set_scroll_on_keystroke(true);
         terminal.set_mouse_autohide(true);
@@ -704,6 +821,8 @@ impl Workbench {
         let backdrop = Background::new(&scroller, true);
         backdrop.update(&self.appearance.borrow());
         let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let search = TerminalSearch::new(&terminal);
+        page.append(&search.bar);
         page.append(&backdrop.widget());
         let tab = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         tab.set_hexpand(false);
@@ -718,6 +837,7 @@ impl Workbench {
         let close = icon("window-close-symbolic", "关闭会话");
         tab.append(&close);
         let session = Rc::new(Session {
+            search,
             terminal,
             page,
             title,
@@ -976,80 +1096,78 @@ impl Workbench {
         });
         s.terminal.add_controller(click);
     }
+    fn dispatch_shortcut(
+        self: &Rc<Self>,
+        key: gdk::Key,
+        mods: gdk::ModifierType,
+    ) -> glib::Propagation {
+        let action = self
+            .preferences
+            .borrow()
+            .action_for(key, mods)
+            .map(str::to_string);
+        let Some(action) = action else {
+            return glib::Propagation::Proceed;
+        };
+        // Leave text editing shortcuts to entries and the file panel. Application
+        // shortcuts act on the terminal only when it owns keyboard focus.
+        let session = self.current_session();
+        if action != "new_session"
+            && action != "search"
+            && !session.as_ref().is_some_and(|s| s.terminal.has_focus())
+        {
+            return glib::Propagation::Proceed;
+        }
+        if action == "new_session" {
+            self.new_session();
+            return glib::Propagation::Stop;
+        }
+        let Some(s) = session else {
+            return glib::Propagation::Proceed;
+        };
+        match action.as_str() {
+            "search" => s.search.open(),
+            "copy" => s.terminal.copy_clipboard_format(vte::Format::Text),
+            "paste" => s.terminal.paste_clipboard(),
+            "close_session" => self.close_session(s.clone()),
+            "zoom_in" | "zoom_out" | "zoom_reset" => {
+                s.terminal.set_font_scale(if action == "zoom_reset" {
+                    1.0
+                } else {
+                    (s.terminal.font_scale() + if action == "zoom_out" { -0.1 } else { 0.1 })
+                        .clamp(0.5, 2.5)
+                });
+            }
+            _ => {
+                if let Some(g) = self.groups.borrow().get(&s.server) {
+                    let count = g.notebook.n_pages();
+                    let n = g.notebook.current_page().unwrap_or(0);
+                    let target = match action.as_str() {
+                        "next_tab" => Some((n + 1) % count),
+                        "previous_tab" => Some((n + count - 1) % count),
+                        _ => action
+                            .strip_prefix("tab_")
+                            .and_then(|n| n.parse::<u32>().ok())
+                            .filter(|n| *n <= count)
+                            .map(|n| n - 1),
+                    };
+                    if let Some(n) = target {
+                        g.notebook.set_current_page(Some(n));
+                    }
+                }
+            }
+        }
+        glib::Propagation::Stop
+    }
+
     fn keyboard(self: &Rc<Self>) {
         let keys = gtk::EventControllerKey::new();
         keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(self);
         keys.connect_key_pressed(move |_, key, _, mods| {
-            let Some(w) = weak.upgrade() else {
-                return glib::Propagation::Proceed;
-            };
-            let ctrl = mods.contains(gdk::ModifierType::CONTROL_MASK);
-            let shift = mods.contains(gdk::ModifierType::SHIFT_MASK);
-            let alt = mods.contains(gdk::ModifierType::ALT_MASK);
-            let key = key.to_lower();
-            if ctrl && shift && key == gdk::Key::t {
-                w.new_session();
-                return glib::Propagation::Stop;
-            }
-            let Some(s) = w.current_session() else {
-                return glib::Propagation::Proceed;
-            };
-            if ctrl && shift {
-                match key {
-                    gdk::Key::c => s.terminal.copy_clipboard_format(vte::Format::Text),
-                    gdk::Key::v => s.terminal.paste_clipboard(),
-                    gdk::Key::w => w.close_session(s.clone()),
-                    _ => return glib::Propagation::Proceed,
-                }
-                return glib::Propagation::Stop;
-            }
-            if alt {
-                if let Some(n) = key.to_unicode().and_then(|c| c.to_digit(10)) {
-                    if (1..=9).contains(&n) {
-                        if let Some(g) = w.groups.borrow().get(&s.server) {
-                            if n <= g.notebook.n_pages() {
-                                g.notebook.set_current_page(Some(n - 1));
-                            }
-                        }
-                        return glib::Propagation::Stop;
-                    }
-                }
-            }
-            if ctrl
-                && [
-                    gdk::Key::plus,
-                    gdk::Key::equal,
-                    gdk::Key::minus,
-                    gdk::Key::_0,
-                ]
-                .contains(&key)
-            {
-                let scale = if key == gdk::Key::_0 {
-                    1.0
-                } else {
-                    (s.terminal.font_scale() + if key == gdk::Key::minus { -0.1 } else { 0.1 })
-                        .clamp(0.5, 2.5)
-                };
-                s.terminal.set_font_scale(scale);
-                return glib::Propagation::Stop;
-            }
-            if ctrl && (key == gdk::Key::Page_Up || key == gdk::Key::Page_Down) {
-                if let Some(g) = w.groups.borrow().get(&s.server) {
-                    let count = g.notebook.n_pages();
-                    if count > 0 {
-                        let n = g.notebook.current_page().unwrap_or(0);
-                        g.notebook
-                            .set_current_page(Some(if key == gdk::Key::Page_Down {
-                                (n + 1) % count
-                            } else {
-                                (n + count - 1) % count
-                            }));
-                    }
-                }
-                return glib::Propagation::Stop;
-            }
-            glib::Propagation::Proceed
+            weak.upgrade().map_or(glib::Propagation::Proceed, |w| {
+                w.dispatch_shortcut(key, mods)
+            })
         });
         self.window.add_controller(keys);
     }
@@ -1569,7 +1687,7 @@ mod tests {
         settle_layout();
         let header = w.window.titlebar().unwrap();
         let toggle = find_button(&header, "显示或隐藏服务器栏").unwrap();
-        let new_button = find_button(&header, "新建会话 · Ctrl+Shift+T").unwrap();
+        let new_button = w.new_button.clone();
         assert_eq!(
             toggle.next_sibling().as_ref(),
             Some(new_button.upcast_ref())
@@ -1636,10 +1754,36 @@ mod tests {
         wait_for(|| !first.active());
         assert_eq!(exit_code.get(), Some(0));
         assert_eq!(first.status.borrow().as_str(), "已结束");
+        assert_eq!(first.terminal.scrollback_lines(), 9999);
+        assert!(!first.terminal.is_audible_bell());
+        crate::terminal_search::verify(&w.window);
+        preferences::verify(&w.window);
+        let mut custom = Preferences::default();
+        custom.scrollback_lines = 1234;
+        custom.shortcuts.insert("search".into(), "F6".into());
+        w.apply_preferences(custom);
+        assert_eq!(first.terminal.scrollback_lines(), 1234);
+        assert_eq!(
+            w.dispatch_shortcut(gdk::Key::F6, gdk::ModifierType::empty()),
+            glib::Propagation::Stop
+        );
+        assert!(first.search.bar.is_visible());
+        first.search.close();
+        assert_eq!(
+            w.dispatch_shortcut(
+                gdk::Key::f,
+                gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::SHIFT_MASK
+            ),
+            glib::Propagation::Proceed
+        );
         verify_new_button(&w);
-        let add = find_button(w.window.upcast_ref(), "新建会话 · Ctrl+Shift+T").unwrap();
+        let add = w.new_button.clone();
         add.emit_clicked();
         let second = w.current_session().unwrap();
+        assert_eq!(second.terminal.scrollback_lines(), 1234);
+        assert!(!second.terminal.is_audible_bell());
+        assert!(!second.search.bar.is_visible());
+        w.apply_preferences(Preferences::default());
         wait_for(|| second.pid.get().is_some());
         assert_eq!(w.groups.borrow().get("").unwrap().notebook.n_pages(), 2);
         verify_new_button(&w);

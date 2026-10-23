@@ -14,6 +14,7 @@ fn rgba(value: &str) -> gdk::RGBA {
 }
 
 pub fn apply_terminal(term: &vte::Terminal, settings: &Appearance) {
+    term.set_audible_bell(false);
     term.set_font(Some(&gtk::pango::FontDescription::from_string(
         &settings.font,
     )));
